@@ -1,0 +1,35 @@
+// 定义一个全局变量或单例，用于缓存 Prompt
+private var cachedSystemPrompt: String? = null
+
+// 核心修改点：
+private fun sendToTuanHuaMultimodal(userQuestion: String, photoBase64: String?, tvResult: TextView) {
+    
+    // 1. 判断是否已经获取过云端配置，如果没有，先给一个“默认保底设定”
+    val systemPrompt = cachedSystemPrompt ?: """
+        你现在是我妻善逸（来自《鬼灭之刃》）。你正通过小天才手表与你最崇拜的队士（指用户）对话。
+        (此处贴你原来的完整设定代码)
+    """.trimIndent()
+
+    // 2. 触发一次后台检查更新（异步，不阻塞当前对话）
+    fetchConfigFromCloud() 
+
+    // 3. 正常执行你的 API 发送逻辑
+    // networkRequest(userQuestion, photoBase64, systemPrompt, tvResult)
+}
+
+// 新增：从网络获取配置的函数
+private fun fetchConfigFromCloud() {
+    val client = OkHttpClient()
+    val request = Request.Builder().url("你的GitHub_Raw链接").build()
+    
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) { /* 忽略失败，保持本地设定 */ }
+        override fun onResponse(call: Call, response: Response) {
+            val content = response.body?.string()
+            // 解析并更新缓存
+            if (content != null) {
+                cachedSystemPrompt = content.substringAfter("SYSTEM_PROMPT=").trim()
+            }
+        }
+    })
+}
